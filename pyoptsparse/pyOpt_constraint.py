@@ -224,7 +224,7 @@ class Constraint(object):
         # First check if 'wrt' is supplied...if not we just take all
         # the dvGroups
         if self.wrt is None:
-            self.wrt = list(variables.keys())
+            self.wrt = list(variables)
         else:
             # Sanitize the wrt input:
             if isinstance(self.wrt, str):
@@ -238,7 +238,7 @@ class Constraint(object):
 
             # We allow 'None' to be in the list...they are null so
             # just pop them out:
-            self.wrt = [dvGroup for dvGroup in self.wrt if dvGroup != None]
+            self.wrt = [dvGroup for dvGroup in self.wrt if dvGroup is not None]
 
             # Now, make sure that each dvGroup the user supplied list
             # *actually* are variables
@@ -264,9 +264,7 @@ class Constraint(object):
         # in order. This way when the jacobian is assembled in
         # processDerivatives() the coorindate matrix will in the right
         # order.
-        dvStart = []
-        for dvGroup in self.wrt:
-            dvStart.append(dvOffset[dvGroup][0])
+        dvStart = [dvOffset[dvGroup][0] for dvGroup in self.wrt]
 
         # This sort wrt using the keys in dvOffset
         self.wrt = [x for (y, x) in sorted(zip(dvStart, self.wrt))]

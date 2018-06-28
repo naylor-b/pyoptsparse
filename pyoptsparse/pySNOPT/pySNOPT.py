@@ -41,7 +41,7 @@ import numpy
 # # ===========================================================================
 from ..pyOpt_optimizer import Optimizer
 from ..pyOpt_error import Error
-from ..pyOpt_utils import convertToCSC, ICOL, IDATA, IROW, IROWIND, ICOLP, \
+from ..pyOpt_utils import ICOL, IDATA, IROW, IROWIND, ICOLP, \
     extractRows, mapToCSC, scaleRows
 # =============================================================================
 # SNOPT Optimizer Class

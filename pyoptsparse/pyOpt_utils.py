@@ -10,7 +10,7 @@ dictionary format to represent the three most common forms of sparse matrices:
 
 mat = {'coo':[row, col, data], 'shape':[nrow, ncols]} # A coo matrix
 mat = {'csr':[rowp, colind, data], 'shape':[nrow, ncols]} # A csr matrix
-mat = {'coo':[colp, rowind, data], 'shape':[nrow, ncols]} # A csc matrix
+mat = {'csc':[colp, rowind, data], 'shape':[nrow, ncols]} # A csc matrix
 
 Copyright (c) 2008-2013
 All rights reserved.
@@ -26,6 +26,8 @@ History
 '''
 import numpy
 import warnings
+from scipy.sparse import coo_matrix, csr_matrix, csc_matrix, issparse
+
 from .pyOpt_error import Error
 # Define index memonics
 IROW = 0
@@ -38,7 +40,7 @@ ICOLP = 0
 IROWIND = 1
 
 IDATA = 2
-__all__ = ['convertToCOO', 'convertToCSR', 'convertToCSC', 'convertToDense',
+__all__ = ['convertToCOO', 'convertToCSR', 'convertToDense',
            'mapToCSC', 'mapToCSR',
            'scaleColumns', 'scaleRows', 'extractRows', 'IROW', 'ICOL',
            'IROWP', 'ICOLIND', 'ICOLP', 'IROWIND', 'IDATA']
@@ -302,62 +304,6 @@ def convertToCSR(mat):
 
     return {'csr':[rowp, ncols, ndata], 'shape':[n, m]}
 
-def convertToCSC(mat):
-    """
-    Take a pyoptsparse sparse matrix definition of a COO, CSR or
-    CSC matrix or numpy array and return the same matrix in CSR format
-
-    Parameters
-    ----------
-    mat : dict or numpy array
-       A sparse matrix representation or numpy array
-
-    Returns
-    -------
-    newMat : dict
-        A coo representation of the same matrix
-    """
-    if 'csc' in mat:
-        return mat
-
-    mat = convertToCSR(mat)
-    n = mat['shape'][0]
-    m = mat['shape'][1]
-    rowp = mat['csr'][IROWP]
-    cols = mat['csr'][ICOLIND]
-    data = mat['csr'][IDATA]
-
-    # Allocate the new arrays
-    colp = numpy.zeros(m+1, 'intc')
-    rows = numpy.zeros(len(cols), 'intc')
-
-    # Count up the number of references to each column
-    for col in cols:
-        colp[col+1] += 1
-
-    # Set colp so that it is now a pointer
-    for i in range(1, m):
-        colp[i] += colp[i-1]
-
-    # Allocate data for the csc object
-    csc_data = numpy.zeros(len(data), dtype=type(data[0]))
-
-    # Scan through the CSR data structure
-    for i in range(n):
-        for jp in range(rowp[i], rowp[i+1]):
-            # Set the new row location in the CSC data structure
-            j = cols[jp]
-            csc_data[colp[j]] = data[jp]
-            rows[colp[j]] = i
-            colp[j] += 1
-
-    # Reset the colp pointer
-    for j in range(m, 0, -1):
-        colp[j] = colp[j-1]
-    colp[0] = 0
-
-    return {'csc':[colp, rows, csc_data], 'shape':[n, m]}
-
 def convertToDense(mat):
     """
     Take a pyopsparse sparse matrix definition and convert back to a dense
@@ -471,12 +417,11 @@ def _denseToCOO(arr):
     dict : mat
         The pyoptsparse representation of a sparse matrix
         """
-    nRows = arr.shape[0]
-    nCols = arr.shape[1]
-    data = arr.flatten()
-    cols = numpy.mod(numpy.arange(nRows*nCols), nCols)
-    rows = numpy.arange(nRows*nCols)//nCols
-    return {'coo':[rows, cols, data], 'shape':[nRows, nCols]}
+    nRows, nCols = arr.shape
+    return coo_matrix((arr.flatten(), 
+                       numpy.arange(nRows*nCols)//nCols, 
+                       numpy.mod(numpy.arange(nRows*nCols), nCols)), shape=arr.shape)
+    # return {'coo':[rows, cols, arr.flatten()], 'shape':[nRows, nCols]}
 
 def _csr_to_coo(mat):
     """
